@@ -257,7 +257,7 @@ async function main() {
   console.log(`  In Progress: ${byColumn["in-progress"] || 0}`);
   console.log(`  In Review:   ${byColumn["in-review"] || 0}`);
   console.log(`  Done:        ${byColumn["done"] || 0}`);
-  console.log(`\nRun "kb dashboard" to see the board.`);
+  console.log(`\nRun "kbs dashboard" to see the board.`);
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────

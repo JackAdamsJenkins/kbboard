@@ -19,16 +19,16 @@ jobs:
         include:
           - os: ubuntu-latest
             target: bun-linux-x64
-            binary: kb-linux-x64
+            binary: kbs-linux-x64
           - os: macos-latest
             target: bun-darwin-arm64
-            binary: kb-darwin-arm64
+            binary: kbs-darwin-arm64
           - os: macos-13
             target: bun-darwin-x64
-            binary: kb-darwin-x64
+            binary: kbs-darwin-x64
           - os: windows-latest
             target: bun-windows-x64
-            binary: kb-windows-x64.exe
+            binary: kbs-windows-x64.exe
 
     steps:
       - name: Checkout
@@ -132,7 +132,7 @@ jobs:
       - name: Combine artifacts
         run: |
           mkdir combined
-          find artifacts -type f \( -name "kb-*" -o -name "*.sha256" \) -exec cp {} combined/ \;
+          find artifacts -type f \( -name "kbs-*" -o -name "*.sha256" \) -exec cp {} combined/ \;
           ls -la combined/
 
       - name: Upload combined archive

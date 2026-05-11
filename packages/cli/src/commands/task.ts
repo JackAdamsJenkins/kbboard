@@ -76,7 +76,7 @@ export async function runTaskList() {
   const tasks = await store.listTasks();
 
   if (tasks.length === 0) {
-    console.log("\n  No tasks yet. Create one with: kb task create\n");
+    console.log("\n  No tasks yet. Create one with: kbs task create\n");
     return;
   }
 

@@ -36,7 +36,7 @@ When you merge the Version Packages PR:
 
 - The `version.yml` workflow detects that all changesets have been consumed
 - It builds all packages and publishes them to **npm** with provenance attestation
-- It creates a git tag `v{version}` based on the `kb` CLI package version
+- It creates a git tag `v{version}` based on the `kbs` CLI package version
 - The tag push triggers `release.yml`, which:
   - Builds platform-specific binaries for Linux x64, macOS x64, macOS arm64, and Windows x64
   - Signs macOS binaries (codesign + notarization) and Windows binaries (Authenticode)
@@ -54,10 +54,10 @@ When you merge the Version Packages PR:
 
 | Platform | Binary name | Signed |
 |----------|------------|--------|
-| Linux x64 | `kb-linux-x64` | — |
-| macOS arm64 | `kb-darwin-arm64` | ✓ (codesign + notarization) |
-| macOS x64 | `kb-darwin-x64` | ✓ (codesign + notarization) |
-| Windows x64 | `kb-windows-x64.exe` | ✓ (Authenticode) |
+| Linux x64 | `kbs-linux-x64` | — |
+| macOS arm64 | `kbs-darwin-arm64` | ✓ (codesign + notarization) |
+| macOS x64 | `kbs-darwin-x64` | ✓ (codesign + notarization) |
+| Windows x64 | `kbs-windows-x64.exe` | ✓ (Authenticode) |
 
 ## Testing binary builds
 

@@ -1,25 +1,25 @@
-# @dustinbyrne/kb
+# @dustinbyrne/kbs
 
 An automated Kanban board for [pi](https://github.com/badlogic/pi-mono). You (or an agent) add high level ideas to your task list, and a team of agents execute them using worktrees.
 
-![kb dashboard](https://raw.githubusercontent.com/dustinbyrne/kb/main/demo/screenshot.png)
+![kbs dashboard](https://raw.githubusercontent.com/dustinbyrne/kbs/main/demo/screenshot.png)
 
 ## Installation
 
 ```bash
-pi install npm:@dustinbyrne/kb
+pi install npm:@dustinbyrne/kbs
 ```
 
 This gives pi the ability to manage and create tasks in your kanban dashboard.
 
 ## The dashboard
 
-Run `/kb` in pi to launch the dashboard and AI engine.
+Run `/kbs` in pi to launch the dashboard and AI engine.
 
 ```
-/kb              # start on default port 4040
-/kb stop         # stop it
-/kb 8080         # run on a custom port
+/kbs              # start on default port 4041
+/kbs stop         # stop it
+/kbs 8080         # run on a custom port
 ```
 
 The dashboard gives you:
@@ -59,25 +59,25 @@ You can manage tasks without leaving the conversation:
 
 > "Every ten minutes, analyze the server code for logic the client hasn't implemented yet and create tasks. Tasks may spawn additional tasks, so just add enough to keep the board saturated."
 
-> "Create a kb task to fix the login redirect bug"
+> "Create a kbs task to fix the login redirect bug"
 
-> "Add a task for dark mode support, it depends on KB-003"
+> "Add a task for dark mode support, it depends on kbs-003"
 
-> "What's the status of KB-042"
+> "What's the status of kbs-042"
 
-> "Attach screenshot.png to KB-007"
+> "Attach screenshot.png to kbs-007"
 
-> "Pause KB-012 — I want to add more context first"
+> "Pause kbs-012 — I want to add more context first"
 
 The extension gives pi tools to create tasks, check progress, attach files, and pause or resume automation.
 
 ## Standalone CLI
 
-kb also works as a standalone CLI outside of pi. See [STANDALONE.md](./STANDALONE.md) for installation and usage without the pi extension.
+kbs also works as a standalone CLI outside of pi. See [STANDALONE.md](./STANDALONE.md) for installation and usage without the pi extension.
 
 ## Full documentation
 
-For architecture details, development setup, and contributor info, see the [project README](https://github.com/dustinbyrne/kb#readme).
+For architecture details, development setup, and contributor info, see the [project README](https://github.com/dustinbyrne/kbs#readme).
 
 ## License
 

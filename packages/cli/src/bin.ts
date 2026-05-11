@@ -28,7 +28,7 @@ if (isBunBinary) {
     writeFileSync(
       join(tmp, "package.json"),
       JSON.stringify(
-        { name: "kb", version: "0.1.0", type: "module", piConfig: { name: "kb", configDir: ".kb" } },
+        { name: "kbs", version: "0.1.0", type: "module", piConfig: { name: "kbs", configDir: ".kb" } },
         null,
         2,
       ) + "\n",
@@ -42,23 +42,23 @@ const { runDashboard } = await import("./commands/dashboard.js");
 const { runTaskCreate, runTaskList, runTaskMove, runTaskMerge, runTaskUpdate, runTaskLog, runTaskShow, runTaskAttach, runTaskPause, runTaskUnpause } = await import("./commands/task.js");
 
 const HELP = `
-kb — AI-orchestrated task board
+kbs — AI-orchestrated task board
 
 Usage:
-  kb dashboard                        Start the board web UI
-  kb task create [desc] [opts]         Create a new task (goes to triage)
-  kb task list                        List all tasks
-  kb task show <id>                   Show task details, steps, log
-  kb task move <id> <col>             Move a task to a column
-  kb task update <id> <step> <status> Update step status (pending|in-progress|done|skipped)
-  kb task log <id> <message>          Add a log entry
-  kb task merge <id>                  Merge an in-review task and close it
-  kb task attach <id> <file>          Attach a file to a task
-  kb task pause <id>                  Pause a task (stops all automation)
-  kb task unpause <id>                Unpause a task (resumes automation)
+  kbs dashboard                        Start the board web UI
+  kbs task create [desc] [opts]         Create a new task (goes to triage)
+  kbs task list                        List all tasks
+  kbs task show <id>                   Show task details, steps, log
+  kbs task move <id> <col>             Move a task to a column
+  kbs task update <id> <step> <status> Update step status (pending|in-progress|done|skipped)
+  kbs task log <id> <message>          Add a log entry
+  kbs task merge <id>                  Merge an in-review task and close it
+  kbs task attach <id> <file>          Attach a file to a task
+  kbs task pause <id>                  Pause a task (stops all automation)
+  kbs task unpause <id>                Unpause a task (resumes automation)
 
 Options:
-  --port, -p <port>          Dashboard port (default: 4040)
+  --port, -p <port>          Dashboard port (default: 4041)
   --attach <file>            Attach file(s) on task create (repeatable)
   --depends <id>             Declare dependency on task create (repeatable)
   --help, -h                 Show this help
@@ -86,7 +86,7 @@ async function main() {
         const portIdx = args.indexOf("--port");
         const portIdxShort = args.indexOf("-p");
         const pi = portIdx !== -1 ? portIdx : portIdxShort;
-        const port = pi !== -1 ? parseInt(args[pi + 1], 10) : 4040;
+        const port = pi !== -1 ? parseInt(args[pi + 1], 10) : 4041;
         const open = !args.includes("--no-open");
         await runDashboard(port, { open });
         break;
@@ -180,7 +180,7 @@ async function main() {
           }
           default:
             console.error(`Unknown subcommand: task ${subcommand || ""}`);
-            console.log("Try: kb task create | list | move");
+            console.log("Try: kbs task create | list | move");
             process.exit(1);
         }
         break;

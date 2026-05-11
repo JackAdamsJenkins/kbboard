@@ -405,22 +405,22 @@ describe("runDashboard — port fallback on EADDRINUSE", () => {
   });
 
   it("listens on the requested port when available", async () => {
-    await runDashboard(4040, { open: false });
+    await runDashboard(4041, { open: false });
 
     // Wait for async 'listening' event
     await new Promise((r) => setTimeout(r, 50));
 
     // mockListen should have been called with the requested port
-    expect(mockListen).toHaveBeenCalledWith(4040);
+    expect(mockListen).toHaveBeenCalledWith(4041);
 
     // Banner should show the requested port
     expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining("http://localhost:4040"),
+      expect.stringContaining("http://localhost:4041"),
     );
 
     // No warning should be printed
     const warningCalls = consoleSpy.mock.calls.filter(
-      (args) => typeof args[0] === "string" && args[0].includes("Port 4040 in use"),
+      (args) => typeof args[0] === "string" && args[0].includes("Port 4041 in use"),
     );
     expect(warningCalls).toHaveLength(0);
   });
@@ -451,7 +451,7 @@ describe("runDashboard — port fallback on EADDRINUSE", () => {
       return serverEmitter;
     });
 
-    await runDashboard(4040, { open: false });
+    await runDashboard(4041, { open: false });
 
     // Wait for async events to settle
     await new Promise((r) => setTimeout(r, 100));
@@ -489,14 +489,14 @@ describe("runDashboard — port fallback on EADDRINUSE", () => {
       return serverEmitter;
     });
 
-    await runDashboard(4040, { open: false });
+    await runDashboard(4041, { open: false });
 
     // Wait for async events to settle
     await new Promise((r) => setTimeout(r, 100));
 
     // Should print warning with both the requested and actual ports
     expect(consoleSpy).toHaveBeenCalledWith(
-      `⚠ Port 4040 in use, using ${fallbackPort} instead`,
+      `⚠ Port 4041 in use, using ${fallbackPort} instead`,
     );
   });
 });

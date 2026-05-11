@@ -44,11 +44,11 @@ Tests are required. Typechecks and manual verification are not substitutes for r
 
 ## Pi Extension (`packages/cli/src/extension.ts`)
 
-The pi extension provides tools and a `/kb` command for interacting with kb from within a pi session. It ships as part of `@dustinbyrne/kb` — one `pi install` gives you both the CLI and the extension.
+The pi extension provides tools and a `/kbs` command for interacting with kbs from within a pi session. It ships as part of `@dustinbyrne/kb` — one `pi install` gives you both the CLI and the extension.
 
 Update it when:
 
-- **CLI commands change** — if `kb task create`, `kb task list`, `kb task show`, `kb task attach`, `kb task pause`, or `kb task unpause` change their behavior, flags, or output, update the corresponding tool in `packages/cli/src/extension.ts`.
+- **CLI commands change** — if `kbs task create`, `kbs task list`, `kbs task show`, `kbs task attach`, `kbs task pause`, or `kbs task unpause` change their behavior, flags, or output, update the corresponding tool in `packages/cli/src/extension.ts`.
 - **Task store API changes** — the extension calls `TaskStore` directly (`createTask`, `listTasks`, `getTask`, `addAttachment`, `pauseTask`). If these methods change signature or behavior, update the extension.
 - **New user-facing features** — if a new CLI command is added that the chat agent should be able to use (task creation, status checking, automation control), add a tool for it.
 

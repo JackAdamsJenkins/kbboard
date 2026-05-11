@@ -353,7 +353,7 @@ export async function runDashboard(port: number, opts: { open?: boolean } = {}) 
     }
 
     console.log();
-    console.log(`  kb board`);
+    console.log(`  kbs board`);
     console.log(`  ────────────────────────`);
     console.log(`  → http://localhost:${actualPort}`);
     console.log();

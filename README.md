@@ -1,8 +1,8 @@
-# kb
+# kbs
 
 AI-orchestrated task board. Like Trello, but your tasks get specified, executed, and delivered by AI — powered by [pi](https://github.com/badlogic/pi-mono).
 
-![kb dashboard](demo/screenshot.png)
+![kbs dashboard](demo/screenshot.png)
 
 ## Workflow
 
@@ -51,20 +51,20 @@ npm i -g @dustinbyrne/kb
 Then from the root of your repository:
 
 ```bash
-kb dashboard
+kbs dashboard
 ```
 
-Open [http://localhost:4040](http://localhost:4040) — create tasks from the board or the CLI.
+Open [http://localhost:4041](http://localhost:4041) — create tasks from the board or the CLI.
 
 ### CLI commands
 
 ```bash
-kb task create "Fix the login redirect bug"
-kb task create "Button misaligned" --attach screenshot.png
-kb task list
-kb task show KB-001
-kb task move KB-001 todo
-kb task merge KB-001
+kbs task create "Fix the login redirect bug"
+kbs task create "Button misaligned" --attach screenshot.png
+kbs task list
+kbs task show KB-001
+kbs task move KB-001 todo
+kbs task merge KB-001
 ```
 
 Agents can use these same commands, or see [`.agents/skills/`](.agents/skills/) for structured skill docs.
@@ -76,7 +76,7 @@ The AI engine uses [pi](https://github.com/badlogic/pi-mono) under the hood:
 1. `npm i -g @mariozechner/pi-coding-agent`
 2. Run `pi` and use `/login`, or set `ANTHROPIC_API_KEY`
 
-kb reuses your existing pi authentication.
+kbs reuses your existing pi authentication.
 
 ## Packages
 
@@ -85,7 +85,7 @@ kb reuses your existing pi authentication.
 | `@kb/core`      | Domain model — tasks, board columns, file-based store           |
 | `@kb/dashboard` | Web UI — Express server + kanban board with SSE                 |
 | `@kb/engine`    | AI engine — triage (pi), execution (pi + worktrees), scheduling |
-| `kb` (cli)      | CLI — `kb dashboard`, `kb task create/list/move/attach`         |
+| `kbs` (cli)      | CLI — `kbs dashboard`, `kbs task create/list/move/attach`         |
 
 ## Architecture
 
@@ -105,7 +105,7 @@ Tasks live on disk in `.kb/tasks/` in the project root:
 
 ### Board UI
 
-Real-time kanban board at `localhost:4040`:
+Real-time kanban board at `localhost:4041`:
 
 - Drag-and-drop cards between columns
 - Create tasks from the web UI
@@ -139,7 +139,7 @@ pnpm dev task list              # CLI commands
 
 ## Building a standalone executable
 
-You can build a single self-contained `kb` binary using [Bun](https://bun.sh/):
+You can build a single self-contained `kbs` binary using [Bun](https://bun.sh/):
 
 ```bash
 pnpm build:exe
@@ -147,18 +147,18 @@ pnpm build:exe
 
 This compiles all TypeScript, builds the dashboard client, and produces:
 
-- `packages/cli/dist/kb` — the standalone binary
+- `packages/cli/dist/kbs` — the standalone binary
 - `packages/cli/dist/client/` — co-located dashboard assets
 
 Run the binary directly — no Node.js, pnpm, or workspace setup needed:
 
 ```bash
-./packages/cli/dist/kb --help
-./packages/cli/dist/kb task list
-./packages/cli/dist/kb dashboard
+./packages/cli/dist/kbs --help
+./packages/cli/dist/kbs task list
+./packages/cli/dist/kbs dashboard
 ```
 
-To distribute, copy both the `kb` binary and the `client/` directory together.
+To distribute, copy both the `kbs` binary and the `client/` directory together.
 
 ### Cross-compilation
 
@@ -172,16 +172,16 @@ This produces binaries for all supported targets in `packages/cli/dist/`:
 
 | Target             | Output               |
 | ------------------ | -------------------- |
-| `bun-linux-x64`    | `kb-linux-x64`       |
-| `bun-linux-arm64`  | `kb-linux-arm64`     |
-| `bun-darwin-x64`   | `kb-darwin-x64`      |
-| `bun-darwin-arm64` | `kb-darwin-arm64`    |
-| `bun-windows-x64`  | `kb-windows-x64.exe` |
+| `bun-linux-x64`    | `kbs-linux-x64`       |
+| `bun-linux-arm64`  | `kbs-linux-arm64`     |
+| `bun-darwin-x64`   | `kbs-darwin-x64`      |
+| `bun-darwin-arm64` | `kbs-darwin-arm64`    |
+| `bun-windows-x64`  | `kbs-windows-x64.exe` |
 
 To build for a specific platform:
 
 ```bash
-pnpm --filter kb build:exe -- --target bun-linux-x64
+pnpm --filter @dustinbyrne/kb build:exe -- --target bun-linux-x64
 ```
 
 The `client/` directory is shared across all binaries (platform-independent assets).
@@ -189,7 +189,7 @@ The `client/` directory is shared across all binaries (platform-independent asse
 You can override the dashboard asset path via the `KB_CLIENT_DIR` environment variable:
 
 ```bash
-KB_CLIENT_DIR=/path/to/client ./kb dashboard
+KB_CLIENT_DIR=/path/to/client ./kbs dashboard
 ```
 
 **Prerequisites:** Bun ≥ 1.0 (`bun --version`)
@@ -201,7 +201,7 @@ Packages are published to npm automatically via GitHub Actions and [changesets](
 ### Installing from npm
 
 ```bash
-npm install -g kb
+npm install -g @dustinbyrne/kb
 ```
 
 ### Triggering a release

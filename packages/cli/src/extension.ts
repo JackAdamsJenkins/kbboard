@@ -57,15 +57,15 @@ export default function kbExtension(pi: ExtensionAPI) {
   // ── kb_task_create ───────────────────────────────────────────────
 
   pi.registerTool({
-    name: "kb_task_create",
-    label: "KB: Create Task",
+    name: "kbs_task_create",
+    label: "KBS: Create Task",
     description:
-      "Create a new task on the kb task board. The task enters the triage column " +
+      "Create a new task on the kbs task board. The task enters the triage column " +
       "where the AI triage agent will specify it into a full prompt with steps, " +
       "file scope, and acceptance criteria.",
-    promptSnippet: "Create a task on the kb AI-orchestrated task board",
+    promptSnippet: "Create a task on the kbs AI-orchestrated task board",
     promptGuidelines: [
-      "Use kb_task_create for task tracking — be descriptive so the triage agent can write a good spec.",
+      "Use kbs_task_create for task tracking — be descriptive so the triage agent can write a good spec.",
       "Include the problem AND desired outcome. For bugs, describe current vs expected behavior.",
     ],
     parameters: Type.Object({
@@ -110,10 +110,10 @@ export default function kbExtension(pi: ExtensionAPI) {
   // ── kb_task_list ─────────────────────────────────────────────────
 
   pi.registerTool({
-    name: "kb_task_list",
-    label: "KB: List Tasks",
-    description: "List all tasks on the kb board, grouped by column.",
-    promptSnippet: "List all tasks on the kb board grouped by column",
+    name: "kbs_task_list",
+    label: "KBS: List Tasks",
+    description: "List all tasks on the kbs board, grouped by column.",
+    promptSnippet: "List all tasks on the kbs board grouped by column",
     parameters: Type.Object({
       column: Type.Optional(
         StringEnum([...COLUMNS] as unknown as string[], {
@@ -168,10 +168,10 @@ export default function kbExtension(pi: ExtensionAPI) {
   // ── kb_task_show ─────────────────────────────────────────────────
 
   pi.registerTool({
-    name: "kb_task_show",
-    label: "KB: Show Task",
+    name: "kbs_task_show",
+    label: "KBS: Show Task",
     description: "Show full details for a task including steps, progress, and log entries.",
-    promptSnippet: "Show full details for a kb task",
+    promptSnippet: "Show full details for a kbs task",
     parameters: Type.Object({
       id: Type.String({ description: "Task ID (e.g. KB-001)" }),
     }),
@@ -247,12 +247,12 @@ export default function kbExtension(pi: ExtensionAPI) {
   // ── kb_task_attach ───────────────────────────────────────────────
 
   pi.registerTool({
-    name: "kb_task_attach",
-    label: "KB: Attach File",
+    name: "kbs_task_attach",
+    label: "KBS: Attach File",
     description:
       "Attach a file to a task. Supports images (png, jpg, gif, webp) and " +
       "text files (txt, log, json, yaml, yml, toml, csv, xml).",
-    promptSnippet: "Attach a file to a kb task",
+    promptSnippet: "Attach a file to a kbs task",
     parameters: Type.Object({
       id: Type.String({ description: "Task ID (e.g. KB-001)" }),
       path: Type.String({ description: "Path to the file to attach" }),
@@ -298,11 +298,11 @@ export default function kbExtension(pi: ExtensionAPI) {
   // ── kb_task_pause ────────────────────────────────────────────────
 
   pi.registerTool({
-    name: "kb_task_pause",
-    label: "KB: Pause Task",
+    name: "kbs_task_pause",
+    label: "KBS: Pause Task",
     description:
       "Pause a task — stops all automated agent and scheduler interaction for this task.",
-    promptSnippet: "Pause a kb task (stops automation)",
+    promptSnippet: "Pause a kbs task (stops automation)",
     parameters: Type.Object({
       id: Type.String({ description: "Task ID (e.g. KB-001)" }),
     }),
@@ -321,11 +321,11 @@ export default function kbExtension(pi: ExtensionAPI) {
   // ── kb_task_unpause ──────────────────────────────────────────────
 
   pi.registerTool({
-    name: "kb_task_unpause",
-    label: "KB: Unpause Task",
+    name: "kbs_task_unpause",
+    label: "KBS: Unpause Task",
     description:
       "Unpause a task — resumes automated agent and scheduler interaction.",
-    promptSnippet: "Unpause a kb task (resumes automation)",
+    promptSnippet: "Unpause a kbs task (resumes automation)",
     parameters: Type.Object({
       id: Type.String({ description: "Task ID (e.g. KB-001)" }),
     }),
@@ -346,8 +346,8 @@ export default function kbExtension(pi: ExtensionAPI) {
   let dashboardProcess: ChildProcess | null = null;
   let dashboardPort: number | null = null;
 
-  pi.registerCommand("kb", {
-    description: "Start (or stop) the kb dashboard and AI engine",
+  pi.registerCommand("kbs", {
+    description: "Start (or stop) the kbs dashboard and AI engine",
     handler: async (args, ctx) => {
       const trimmed = (args ?? "").trim();
 
@@ -357,10 +357,10 @@ export default function kbExtension(pi: ExtensionAPI) {
           dashboardProcess.kill("SIGINT");
           dashboardProcess = null;
           dashboardPort = null;
-          ctx.ui.setStatus("kb", "");
-          ctx.ui.notify("kb dashboard stopped", "info");
+          ctx.ui.setStatus("kbs", "");
+          ctx.ui.notify("kbs dashboard stopped", "info");
         } else {
-          ctx.ui.notify("kb dashboard is not running", "warning");
+          ctx.ui.notify("kbs dashboard is not running", "warning");
         }
         return;
       }
@@ -368,11 +368,11 @@ export default function kbExtension(pi: ExtensionAPI) {
       // /kb status
       if (trimmed === "status") {
         if (dashboardProcess && !dashboardProcess.killed) {
-          ctx.ui.notify(`kb dashboard running on http://localhost:${dashboardPort}`, "info");
+          ctx.ui.notify(`kbs dashboard running on http://localhost:${dashboardPort}`, "info");
         } else {
           dashboardProcess = null;
           dashboardPort = null;
-          ctx.ui.notify("kb dashboard is not running", "info");
+          ctx.ui.notify("kbs dashboard is not running", "info");
         }
         return;
       }
@@ -380,16 +380,16 @@ export default function kbExtension(pi: ExtensionAPI) {
       // /kb [port] — start the dashboard
       if (dashboardProcess && !dashboardProcess.killed) {
         ctx.ui.notify(
-          `kb dashboard already running on http://localhost:${dashboardPort}. Use /kb stop first.`,
+          `kbs dashboard already running on http://localhost:${dashboardPort}. Use /kbs stop first.`,
           "warning",
         );
         return;
       }
 
-      const port = trimmed ? parseInt(trimmed, 10) || 4040 : 4040;
+      const port = trimmed ? parseInt(trimmed, 10) || 4041 : 4041;
 
-      // Find the kb binary: prefer local node_modules, then global
-      const child = spawn("kb", ["dashboard", "--port", String(port), "--no-open"], {
+      // Find the kbs binary: prefer local node_modules, then global
+      const child = spawn("kbs", ["dashboard", "--port", String(port), "--no-open"], {
         cwd: ctx.cwd,
         stdio: ["ignore", "pipe", "pipe"],
         detached: false,
@@ -403,17 +403,17 @@ export default function kbExtension(pi: ExtensionAPI) {
       child.on("error", (err) => {
         dashboardProcess = null;
         dashboardPort = null;
-        ctx.ui.setStatus("kb", "");
-        ctx.ui.notify(`Failed to start kb dashboard: ${err.message}`, "error");
+        ctx.ui.setStatus("kbs", "");
+        ctx.ui.notify(`Failed to start kbs dashboard: ${err.message}`, "error");
       });
 
       child.on("exit", (code) => {
         if (dashboardProcess === child) {
           dashboardProcess = null;
           dashboardPort = null;
-          ctx.ui.setStatus("kb", "");
+          ctx.ui.setStatus("kbs", "");
           if (code !== 0 && code !== null) {
-            ctx.ui.notify(`kb dashboard exited with code ${code}`, "warning");
+            ctx.ui.notify(`kbs dashboard exited with code ${code}`, "warning");
           }
         }
       });
@@ -423,9 +423,9 @@ export default function kbExtension(pi: ExtensionAPI) {
 
       if (dashboardProcess && !dashboardProcess.killed) {
         const url = `http://localhost:${port}`;
-        ctx.ui.notify(`kb dashboard started on ${url} (AI engine active)`, "info");
+        ctx.ui.notify(`kbs dashboard started on ${url} (AI engine active)`, "info");
         const link = `\x1b]8;;${url}\x1b\\${url}\x1b]8;;\x1b\\`;
-        ctx.ui.setStatus("kb", `kb ● ${link}`);
+        ctx.ui.setStatus("kbs", `kbs ● ${link}`);
       }
     },
   });

@@ -1,6 +1,6 @@
 /**
  * Simulates live board activity — tasks progressing, new ideas landing,
- * triage completing, reviews finishing. Run alongside `kb dashboard`.
+ * triage completing, reviews finishing. Run alongside `kbs dashboard`.
  *
  * Usage: `npx tsx demo/simulate.ts [dir]`
  *

@@ -311,6 +311,18 @@ function registerModelsRoute(router: Router, modelRegistry?: ModelRegistryLike):
         reasoning: m.reasoning,
         contextWindow: m.contextWindow,
       }));
+
+      // Manually add gemma-4-31b-it if not already present
+      if (!models.some((m) => m.id === "gemma-4-31b-it")) {
+        models.push({
+          provider: "google",
+          id: "gemma-4-31b-it",
+          name: "Gemma 4 31B IT",
+          reasoning: false,
+          contextWindow: 131072,
+        });
+      }
+
       res.json(models);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
