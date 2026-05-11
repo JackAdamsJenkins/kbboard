@@ -20,7 +20,7 @@ import type { ToastType } from "../hooks/useToast";
  *   - commands: Test and build command configuration
  *   - merge: Auto-merge settings
  *   - model: Default AI model selection for agent sessions
- *   - authentication: OAuth provider status, login/logout (operates independently of Save)
+ *   - google: Google API key management for Gemini/Gemma models
  */
 const SETTINGS_SECTIONS = [
   { id: "general", label: "General" },
@@ -47,12 +47,6 @@ export function SettingsModal({ onClose, addToast, initialSection }: SettingsMod
   const [activeSection, setActiveSection] = useState<SectionId>(initialSection ?? SETTINGS_SECTIONS[0].id);
   const [prefixError, setPrefixError] = useState<string | null>(null);
 
-  // Auth state (independent of the settings save flow)
-  const [authProviders, setAuthProviders] = useState<AuthProvider[]>([]);
-  const [authLoading, setAuthLoading] = useState(false);
-  const [authActionInProgress, setAuthActionInProgress] = useState<string | null>(null);
-  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   // Model state
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([
     { provider: "google", id: "gemma-4-31b-it", name: "Gemma 4 31B IT", reasoning: false, contextWindow: 131072 }
@@ -71,16 +65,6 @@ export function SettingsModal({ onClose, addToast, initialSection }: SettingsMod
       });
   }, [addToast]);
 
-  // Load auth status when the authentication section is active
-  const loadAuthStatus = useCallback(async () => {
-    try {
-      const { providers } = await fetchAuthStatus();
-      setAuthProviders(providers);
-    } catch {
-      // Silently fail — auth may not be configured
-    }
-  }, []);
-
   useEffect(() => {
     if (activeSection === "model") {
       setModelsLoading(true);
@@ -91,19 +75,6 @@ export function SettingsModal({ onClose, addToast, initialSection }: SettingsMod
     }
   }, [activeSection]);
 
-  useEffect(() => {
-    if (activeSection === "authentication") {
-      setAuthLoading(true);
-      loadAuthStatus().finally(() => setAuthLoading(false));
-    }
-    // Clean up polling when leaving auth section
-    return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-    };
-  }, [activeSection, loadAuthStatus]);
 
   const handleAddKey = () => {
     setForm((f) => ({
@@ -203,7 +174,7 @@ export function SettingsModal({ onClose, addToast, initialSection }: SettingsMod
               <div className="settings-empty-state">Loading available models…</div>
             ) : availableModels.length === 0 ? (
               <div className="settings-empty-state settings-muted">
-                No models available. Configure authentication first.
+                No models available. Add Google API keys in the "Google API Keys" section.
               </div>
             ) : (
               <div className="form-group">
@@ -231,7 +202,7 @@ export function SettingsModal({ onClose, addToast, initialSection }: SettingsMod
                     </optgroup>
                   ))}
                 </select>
-                <small>Select the AI model used for agent sessions. Default: Gemma 4 31B IT.</small>
+                <small>Select the AI model used for agent sessions. Default: gemma-4-31b-it.</small>
               </div>
             )}
             {(() => {
