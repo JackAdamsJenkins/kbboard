@@ -29,7 +29,7 @@ const SETTINGS_SECTIONS = [
   { id: "worktrees", label: "Worktrees" },
   { id: "commands", label: "Commands" },
   { id: "merge", label: "Merge" },
-  { id: "authentication", label: "Authentication" },
+  { id: "google", label: "Google API Keys" },
 ] as const;
 
 export type SectionId = (typeof SETTINGS_SECTIONS)[number]["id"];
@@ -54,7 +54,9 @@ export function SettingsModal({ onClose, addToast, initialSection }: SettingsMod
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Model state
-  const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
+  const [availableModels, setAvailableModels] = useState<ModelInfo[]>([
+    { provider: "google", id: "gemma-4-31b-it", name: "Gemma 4 31B IT", reasoning: false, contextWindow: 131072 }
+  ]);
   const [modelsLoading, setModelsLoading] = useState(false);
 
   useEffect(() => {
@@ -103,48 +105,28 @@ export function SettingsModal({ onClose, addToast, initialSection }: SettingsMod
     };
   }, [activeSection, loadAuthStatus]);
 
-  const handleLogin = useCallback(async (providerId: string) => {
-    setAuthActionInProgress(providerId);
-    try {
-      const { url } = await loginProvider(providerId);
-      window.open(url, "_blank");
+  const handleAddKey = () => {
+    setForm((f) => ({
+      ...f,
+      googleApiKeys: [...(f.googleApiKeys || []), ""],
+    }));
+  };
 
-      // Poll for auth completion every 2 seconds
-      pollIntervalRef.current = setInterval(async () => {
-        try {
-          const { providers } = await fetchAuthStatus();
-          setAuthProviders(providers);
-          const provider = providers.find((p) => p.id === providerId);
-          if (provider?.authenticated) {
-            if (pollIntervalRef.current) {
-              clearInterval(pollIntervalRef.current);
-              pollIntervalRef.current = null;
-            }
-            setAuthActionInProgress(null);
-            addToast("Login successful", "success");
-          }
-        } catch {
-          // Continue polling on transient errors
-        }
-      }, 2000);
-    } catch (err: any) {
-      addToast(err.message || "Login failed", "error");
-      setAuthActionInProgress(null);
-    }
-  }, [addToast, loadAuthStatus]);
+  const handleUpdateKey = (index: number, value: string) => {
+    setForm((f) => {
+      const keys = [...(f.googleApiKeys || [])];
+      keys[index] = value;
+      return { ...f, googleApiKeys: keys };
+    });
+  };
 
-  const handleLogout = useCallback(async (providerId: string) => {
-    setAuthActionInProgress(providerId);
-    try {
-      await logoutProvider(providerId);
-      await loadAuthStatus();
-      addToast("Logged out", "success");
-    } catch (err: any) {
-      addToast(err.message || "Logout failed", "error");
-    } finally {
-      setAuthActionInProgress(null);
-    }
-  }, [addToast, loadAuthStatus]);
+  const handleRemoveKey = (index: number) => {
+    setForm((f) => {
+      const keys = [...(f.googleApiKeys || [])];
+      keys.splice(index, 1);
+      return { ...f, googleApiKeys: keys };
+    });
+  };
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -228,22 +210,17 @@ export function SettingsModal({ onClose, addToast, initialSection }: SettingsMod
                 <label htmlFor="defaultModel">Default Model</label>
                 <select
                   id="defaultModel"
-                  value={selectedValue}
+                  value={selectedValue || "google/gemma-4-31b-it"}
                   onChange={(e) => {
                     const val = e.target.value;
-                    if (!val) {
-                      setForm((f) => ({ ...f, defaultProvider: undefined, defaultModelId: undefined }));
-                    } else {
-                      const slashIdx = val.indexOf("/");
-                      setForm((f) => ({
-                        ...f,
-                        defaultProvider: val.slice(0, slashIdx),
-                        defaultModelId: val.slice(slashIdx + 1),
-                      }));
-                    }
+                    const slashIdx = val.indexOf("/");
+                    setForm((f) => ({
+                      ...f,
+                      defaultProvider: val.slice(0, slashIdx),
+                      defaultModelId: val.slice(slashIdx + 1),
+                    }));
                   }}
                 >
-                  <option value="">Use default</option>
                   {Object.entries(modelsByProvider).map(([provider, models]) => (
                     <optgroup key={provider} label={provider}>
                       {models.map((m) => (
@@ -254,7 +231,7 @@ export function SettingsModal({ onClose, addToast, initialSection }: SettingsMod
                     </optgroup>
                   ))}
                 </select>
-                <small>Select the AI model used for agent sessions. "Use default" lets the engine choose automatically.</small>
+                <small>Select the AI model used for agent sessions. Default: Gemma 4 31B IT.</small>
               </div>
             )}
             {(() => {
@@ -446,61 +423,34 @@ export function SettingsModal({ onClose, addToast, initialSection }: SettingsMod
             </div>
           </>
         );
-      case "authentication":
+      case "google":
         return (
           <>
-            <h4 className="settings-section-heading">Authentication</h4>
-            {authLoading ? (
-              <div className="settings-empty-state">Loading authentication status…</div>
-            ) : authProviders.length === 0 ? (
-              <div className="settings-empty-state settings-muted">
-                No OAuth providers available
-              </div>
-            ) : (
-              <>
-              {!authProviders.some(p => p.authenticated) && (
-                <div className="settings-empty-state settings-muted">
-                  Sign in to at least one provider to get started.
-                </div>
-              )}
-              {authProviders.map((provider) => (
-                <div key={provider.id} className="auth-provider-row">
-                  <div className="auth-provider-info">
-                    <strong>{provider.name}</strong>
-                    <span
-                      data-testid={`auth-status-${provider.id}`}
-                      className={`auth-status-badge ${provider.authenticated ? "authenticated" : "not-authenticated"}`}
-                    >
-                      {provider.authenticated ? "✓ Authenticated" : "✗ Not authenticated"}
-                    </span>
-                  </div>
-                  <div>
-                    {authActionInProgress === provider.id ? (
-                      <button className="btn btn-sm" disabled>
-                        {provider.authenticated ? "Logging out…" : "Waiting for login…"}
-                      </button>
-                    ) : provider.authenticated ? (
-                      <button
-                        className="btn btn-sm"
-                        onClick={() => handleLogout(provider.id)}
-                      >
-                        Logout
-                      </button>
-                    ) : (
-                      <button
-                        className="btn btn-primary btn-sm"
-                        onClick={() => handleLogin(provider.id)}
-                      >
-                        Login
-                      </button>
-                    )}
-                  </div>
+            <h4 className="settings-section-heading">Google API Keys</h4>
+            <div className="api-keys-list">
+              {(form.googleApiKeys || []).map((key, index) => (
+                <div key={index} className="api-key-row">
+                  <input
+                    type="password"
+                    placeholder="Enter Google API Key"
+                    value={key}
+                    onChange={(e) => handleUpdateKey(index, e.target.value)}
+                  />
+                  <button
+                    className="btn btn-sm btn-danger"
+                    onClick={() => handleRemoveKey(index)}
+                    title="Remove key"
+                  >
+                    &times;
+                  </button>
                 </div>
               ))}
-              </>
-            )}
+              <button className="btn btn-sm" onClick={handleAddKey}>
+                + Add API Key
+              </button>
+            </div>
             <small className="auth-hint">
-              Login and logout take effect immediately — no need to save.
+              Google API keys are used by the AI engine to access Gemini and Gemma models.
             </small>
           </>
         );

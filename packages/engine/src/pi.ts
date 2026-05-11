@@ -37,6 +37,8 @@ export interface AgentOptions {
   defaultModelId?: string;
   /** Default thinking effort level (e.g. "medium", "high"). When provided, sets the session's thinking level after creation. */
   defaultThinkingLevel?: string;
+  /** Google AI API keys for the engine. */
+  googleApiKeys?: string[];
 }
 
 /**
@@ -44,7 +46,19 @@ export interface AgentOptions {
  * Reuses the user's existing pi auth and model configuration.
  */
 export async function createKbAgent(options: AgentOptions): Promise<AgentResult> {
-  const authStorage = AuthStorage.create();
+  const authStorage = AuthStorage.inMemory();
+
+  // Inject Google API keys if provided
+  if (options.googleApiKeys && options.googleApiKeys.length > 0) {
+    // We use the first key for now, or the library might handle multiple if we knew how.
+    // For now, let's assume we can set multiple or just the first.
+    options.googleApiKeys.forEach((key) => {
+      if (key) {
+        authStorage.setAuth("google", { apiKey: key });
+      }
+    });
+  }
+
   const modelRegistry = new ModelRegistry(authStorage);
 
   const tools =
@@ -57,10 +71,11 @@ export async function createKbAgent(options: AgentOptions): Promise<AgentResult>
     retry: { enabled: true, maxRetries: 3 },
   });
 
-  // Resolve explicit model selection if provider and model ID are specified
-  const selectedModel = options.defaultProvider && options.defaultModelId
-    ? modelRegistry.find(options.defaultProvider, options.defaultModelId)
-    : undefined;
+  // Default to gemma-4-31b-it if no specific model requested or if explicitly requested
+  const provider = options.defaultProvider || "google";
+  const modelId = options.defaultModelId || "gemma-4-31b-it";
+
+  const selectedModel = modelRegistry.find(provider, modelId);
 
   const resourceLoader = new DefaultResourceLoader({
     cwd: options.cwd,
@@ -79,7 +94,7 @@ export async function createKbAgent(options: AgentOptions): Promise<AgentResult>
     customTools: options.customTools,
     sessionManager: SessionManager.inMemory(),
     settingsManager,
-    ...(selectedModel ? { model: selectedModel } : {}),
+    model: selectedModel,
   });
 
   // Apply thinking level if specified

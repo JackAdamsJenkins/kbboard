@@ -18,7 +18,7 @@ import { createKbAgent } from "./pi.js";
 import { execSync } from "node:child_process";
 import { type TaskStore, type Task, type MergeResult, DEFAULT_SETTINGS } from "@kb/core";
 
-const mockedCreateHaiAgent = vi.mocked(createKbAgent);
+const mockedCreateKbAgent = vi.mocked(createKbAgent);
 const mockedExecSync = vi.mocked(execSync);
 const { existsSync: mockedExistsSyncRaw } = await import("node:fs");
 const mockedExistsSync = vi.mocked(mockedExistsSyncRaw);
@@ -108,7 +108,7 @@ describe("aiMergeTask — conditional worktree cleanup", () => {
     vi.clearAllMocks();
     mockedExistsSync.mockReturnValue(true);
     setupHappyPathExecSync();
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -215,7 +215,7 @@ describe("aiMergeTask — empty squash merge (branch already merged via dep)", (
 
     expect(result.merged).toBe(true);
     // Agent should NOT have been spawned
-    expect(mockedCreateHaiAgent).not.toHaveBeenCalled();
+    expect(mockedCreateKbAgent).not.toHaveBeenCalled();
     // Task should still be moved to done
     expect(store.moveTask).toHaveBeenCalledWith("KB-050", "done");
   });
@@ -257,7 +257,7 @@ describe("aiMergeTask — includeTaskIdInCommit setting", () => {
     vi.clearAllMocks();
     mockedExistsSync.mockReturnValue(true);
     setupHappyPathExecSync();
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -273,7 +273,7 @@ describe("aiMergeTask — includeTaskIdInCommit setting", () => {
 
     await aiMergeTask(store, "/tmp/root", "KB-050");
 
-    const agentCall = mockedCreateHaiAgent.mock.calls[0][0] as any;
+    const agentCall = mockedCreateKbAgent.mock.calls[0][0] as any;
     expect(agentCall.systemPrompt).toContain("<type>(<scope>): <summary>");
     expect(agentCall.systemPrompt).toContain("the task ID");
   });
@@ -290,7 +290,7 @@ describe("aiMergeTask — includeTaskIdInCommit setting", () => {
 
     await aiMergeTask(store, "/tmp/root", "KB-050");
 
-    const agentCall = mockedCreateHaiAgent.mock.calls[0][0] as any;
+    const agentCall = mockedCreateKbAgent.mock.calls[0][0] as any;
     expect(agentCall.systemPrompt).toContain("<type>: <summary>");
     expect(agentCall.systemPrompt).not.toContain("<type>(<scope>): <summary>");
     expect(agentCall.systemPrompt).toContain("Do NOT include a scope");
@@ -364,7 +364,7 @@ describe("aiMergeTask — model settings threading", () => {
     vi.clearAllMocks();
     mockedExistsSync.mockReturnValue(true);
     setupHappyPathExecSync();
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -385,8 +385,8 @@ describe("aiMergeTask — model settings threading", () => {
 
     await aiMergeTask(store, "/tmp/root", "KB-050");
 
-    expect(mockedCreateHaiAgent).toHaveBeenCalledTimes(1);
-    const opts = mockedCreateHaiAgent.mock.calls[0][0] as any;
+    expect(mockedCreateKbAgent).toHaveBeenCalledTimes(1);
+    const opts = mockedCreateKbAgent.mock.calls[0][0] as any;
     expect(opts.defaultProvider).toBe("openai");
     expect(opts.defaultModelId).toBe("gpt-4o");
   });
@@ -399,7 +399,7 @@ describe("aiMergeTask — model settings threading", () => {
 
     await aiMergeTask(store, "/tmp/root", "KB-050");
 
-    const opts = mockedCreateHaiAgent.mock.calls[0][0] as any;
+    const opts = mockedCreateKbAgent.mock.calls[0][0] as any;
     expect(opts.defaultProvider).toBeUndefined();
     expect(opts.defaultModelId).toBeUndefined();
   });
@@ -415,7 +415,7 @@ describe("aiMergeTask — agent log persistence", () => {
   it("logs text deltas to store.appendAgentLog", async () => {
     let capturedOnText: ((delta: string) => void) | undefined;
 
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       capturedOnText = opts.onText;
       return {
         session: {
@@ -442,7 +442,7 @@ describe("aiMergeTask — agent log persistence", () => {
   it("logs tool invocations to store.appendAgentLog", async () => {
     let capturedOnToolStart: ((name: string, args: any) => void) | undefined;
 
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       capturedOnToolStart = opts.onToolStart;
       return {
         session: {
@@ -469,7 +469,7 @@ describe("aiMergeTask — agent log persistence", () => {
     const onAgentText = vi.fn();
     let capturedOnText: ((delta: string) => void) | undefined;
 
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       capturedOnText = opts.onText;
       return {
         session: {
@@ -513,7 +513,7 @@ describe("aiMergeTask — usage limit detection", () => {
     const pauser = new UsageLimitPauser(store);
     const onUsageLimitHitSpy = vi.spyOn(pauser, "onUsageLimitHit");
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockRejectedValue(new Error("rate_limit_error: Rate limit exceeded")),
         dispose: vi.fn(),
@@ -546,7 +546,7 @@ describe("aiMergeTask — usage limit detection", () => {
       dispose: vi.fn(),
       state: { error: "429 Too Many Requests" },
     };
-    mockedCreateHaiAgent.mockResolvedValue({ session: mockSession } as any);
+    mockedCreateKbAgent.mockResolvedValue({ session: mockSession } as any);
 
     await expect(
       aiMergeTask(store, "/tmp/root", "KB-050", { usageLimitPauser: pauser }),
@@ -573,7 +573,7 @@ describe("aiMergeTask — usage limit detection", () => {
     const pauser = new UsageLimitPauser(store);
     const onUsageLimitHitSpy = vi.spyOn(pauser, "onUsageLimitHit");
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockRejectedValue(new Error("connection refused")),
         dispose: vi.fn(),
@@ -593,7 +593,7 @@ describe("aiMergeTask — usage limit detection", () => {
       [{ id: "KB-050", worktree: "/tmp/root/.worktrees/KB-050", column: "in-review" } as Task],
     );
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockRejectedValue(new Error("rate_limit_error: Rate limit exceeded")),
         dispose: vi.fn(),
@@ -614,7 +614,7 @@ describe("aiMergeTask — usage limit detection", () => {
     const pauser = new UsageLimitPauser(store);
     const onUsageLimitHitSpy = vi.spyOn(pauser, "onUsageLimitHit");
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockRejectedValue(new Error("overloaded_error: Overloaded")),
         dispose: vi.fn(),
@@ -646,7 +646,7 @@ describe("aiMergeTask — onSession callback", () => {
       dispose: vi.fn(),
     };
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: mockSession,
     } as any);
 
@@ -663,7 +663,7 @@ describe("aiMergeTask — onSession callback", () => {
   });
 
   it("works without onSession callback (backward compatible)", async () => {
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),

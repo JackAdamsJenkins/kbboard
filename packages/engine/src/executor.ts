@@ -420,6 +420,7 @@ export class TaskExecutor {
           defaultProvider: settings.defaultProvider,
           defaultModelId: settings.defaultModelId,
           defaultThinkingLevel: settings.defaultThinkingLevel,
+          googleApiKeys: settings.googleApiKeys,
         });
 
         // Make session available to custom tools (task_update checkpoint capture, review_step rewind)

@@ -12,6 +12,7 @@ vi.mock("node:fs", () => ({
 import { WorktreePool, scanIdleWorktrees, cleanupOrphanedWorktrees } from "./worktree-pool.js";
 import { execSync } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
+import path from "node:path";
 import type { Task, Column } from "@kb/core";
 
 const mockedExecSync = vi.mocked(execSync);
@@ -206,7 +207,7 @@ function makeTask(id: string, column: Column, worktree?: string): Task {
     description: `Description for ${id}`,
     column,
     dependencies: [],
-    worktree,
+    worktree: worktree ? path.normalize(worktree) : undefined,
     steps: [],
     currentStep: 0,
     log: [],
@@ -240,19 +241,20 @@ describe("scanIdleWorktrees", () => {
       makeDirEntry("bold-eagle"),
     ] as any);
 
+    const repoRoot = path.normalize("/root");
+    const wtBase = path.join(repoRoot, ".worktrees");
+
     const store = createMockStore([
-      makeTask("KB-001", "in-progress", "/root/.worktrees/swift-falcon"),
-      makeTask("KB-002", "done", "/root/.worktrees/calm-river"),
+      makeTask("KB-001", "in-progress", path.join(wtBase, "swift-falcon")),
+      makeTask("KB-002", "done", path.join(wtBase, "calm-river")),
     ]);
 
-    const idle = await scanIdleWorktrees("/root", store);
+    const idle = await scanIdleWorktrees(repoRoot, store);
+    const normalizedIdle = idle.map(p => path.normalize(p));
 
-    // swift-falcon is assigned to in-progress task → NOT idle
-    // calm-river is assigned to done task → idle (done tasks don't count)
-    // bold-eagle is not assigned at all → idle
-    expect(idle).toContain("/root/.worktrees/calm-river");
-    expect(idle).toContain("/root/.worktrees/bold-eagle");
-    expect(idle).not.toContain("/root/.worktrees/swift-falcon");
+    expect(normalizedIdle).toContain(path.join(wtBase, "calm-river"));
+    expect(normalizedIdle).toContain(path.join(wtBase, "bold-eagle"));
+    expect(normalizedIdle).not.toContain(path.join(wtBase, "swift-falcon"));
   });
 
   it("handles empty .worktrees/ directory", async () => {
@@ -276,12 +278,15 @@ describe("scanIdleWorktrees", () => {
       makeDirEntry("review-wt"),
     ] as any);
 
+    const repoRoot = path.normalize("/root");
+    const wtBase = path.join(repoRoot, ".worktrees");
+
     const store = createMockStore([
-      makeTask("KB-010", "in-review", "/root/.worktrees/review-wt"),
+      makeTask("KB-010", "in-review", path.join(wtBase, "review-wt")),
     ]);
 
-    const idle = await scanIdleWorktrees("/root", store);
-    expect(idle).not.toContain("/root/.worktrees/review-wt");
+    const idle = await scanIdleWorktrees(repoRoot, store);
+    expect(idle.map(p => path.normalize(p))).not.toContain(path.join(wtBase, "review-wt"));
   });
 
   it("returns all worktrees when no tasks exist", async () => {
@@ -290,12 +295,14 @@ describe("scanIdleWorktrees", () => {
       makeDirEntry("wt-2"),
     ] as any);
 
+    const repoRoot = path.normalize("/root");
+    const wtBase = path.join(repoRoot, ".worktrees");
     const store = createMockStore([]);
 
-    const idle = await scanIdleWorktrees("/root", store);
+    const idle = await scanIdleWorktrees(repoRoot, store);
     expect(idle).toHaveLength(2);
-    expect(idle).toContain("/root/.worktrees/wt-1");
-    expect(idle).toContain("/root/.worktrees/wt-2");
+    expect(idle.map(p => path.normalize(p))).toContain(path.join(wtBase, "wt-1"));
+    expect(idle.map(p => path.normalize(p))).toContain(path.join(wtBase, "wt-2"));
   });
 });
 
@@ -316,15 +323,17 @@ describe("cleanupOrphanedWorktrees", () => {
 
     const store = createMockStore([]);
 
-    const cleaned = await cleanupOrphanedWorktrees("/root", store);
+    const repoRoot = path.normalize("/root");
+    const wtBase = path.join(repoRoot, ".worktrees");
+    const cleaned = await cleanupOrphanedWorktrees(repoRoot, store);
 
     expect(cleaned).toBe(2);
     const removeCalls = mockedExecSync.mock.calls.filter(
       (c) => typeof c[0] === "string" && (c[0] as string).includes("worktree remove"),
     );
     expect(removeCalls).toHaveLength(2);
-    expect(removeCalls[0][0]).toContain("/root/.worktrees/orphan-1");
-    expect(removeCalls[1][0]).toContain("/root/.worktrees/orphan-2");
+    expect(path.normalize(removeCalls[0][0] as string)).toContain(path.join(wtBase, "orphan-1"));
+    expect(path.normalize(removeCalls[1][0] as string)).toContain(path.join(wtBase, "orphan-2"));
   });
 
   it("preserves worktrees assigned to in-progress/in-review tasks", async () => {
@@ -333,11 +342,13 @@ describe("cleanupOrphanedWorktrees", () => {
       makeDirEntry("orphan-wt"),
     ] as any);
 
+    const repoRoot = path.normalize("/root");
+    const wtBase = path.join(repoRoot, ".worktrees");
     const store = createMockStore([
-      makeTask("KB-001", "in-progress", "/root/.worktrees/active-wt"),
+      makeTask("KB-001", "in-progress", path.join(wtBase, "active-wt")),
     ]);
 
-    const cleaned = await cleanupOrphanedWorktrees("/root", store);
+    const cleaned = await cleanupOrphanedWorktrees(repoRoot, store);
 
     expect(cleaned).toBe(1);
     const removeCalls = mockedExecSync.mock.calls.filter(

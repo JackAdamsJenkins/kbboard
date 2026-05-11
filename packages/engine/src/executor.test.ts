@@ -31,12 +31,14 @@ import { TaskExecutor, buildExecutionPrompt } from "./executor.js";
 import { createKbAgent } from "./pi.js";
 import { reviewStep as mockedReviewStepFn } from "./reviewer.js";
 import { execSync } from "node:child_process";
+import { existsSync, readdirSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import { findWorktreeUser, aiMergeTask } from "./merger.js";
 import { WorktreePool } from "./worktree-pool.js";
 import { generateWorktreeName } from "./worktree-names.js";
 import type { Column, Task, TaskDetail } from "@kb/core";
 
-const mockedCreateHaiAgent = vi.mocked(createKbAgent);
+const mockedCreateKbAgent = vi.mocked(createKbAgent);
 
 function createMockStore() {
   const listeners = new Map<string, Function[]>();
@@ -94,7 +96,7 @@ describe("TaskExecutor with semaphore", () => {
     const acquireSpy = vi.spyOn(sem, "acquire");
     const releaseSpy = vi.spyOn(sem, "release");
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -125,7 +127,7 @@ describe("TaskExecutor with semaphore", () => {
     const sem = new AgentSemaphore(1);
     const store = createMockStore();
 
-    mockedCreateHaiAgent.mockRejectedValue(new Error("agent failed"));
+    mockedCreateKbAgent.mockRejectedValue(new Error("agent failed"));
 
     const onError = vi.fn();
     const executor = new TaskExecutor(store, "/tmp/test", {
@@ -153,7 +155,7 @@ describe("TaskExecutor with semaphore", () => {
   it("sets task status to 'failed' when execution throws", async () => {
     const store = createMockStore();
 
-    mockedCreateHaiAgent.mockRejectedValue(new Error("agent crashed"));
+    mockedCreateKbAgent.mockRejectedValue(new Error("agent crashed"));
 
     const onError = vi.fn();
     const executor = new TaskExecutor(store, "/tmp/test", { onError });
@@ -181,7 +183,7 @@ describe("TaskExecutor with semaphore", () => {
     let concurrent = 0;
     let maxConcurrent = 0;
 
-    mockedCreateHaiAgent.mockImplementation(async () => {
+    mockedCreateKbAgent.mockImplementation(async () => {
       concurrent++;
       maxConcurrent = Math.max(maxConcurrent, concurrent);
       return {
@@ -243,7 +245,7 @@ describe("TaskExecutor worktreeInitCommand", () => {
     vi.clearAllMocks();
     // Default: worktree does NOT exist (new worktree)
     mockedExistsSync.mockReturnValue(false);
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -271,7 +273,7 @@ describe("TaskExecutor worktreeInitCommand", () => {
     );
     expect(initCall).toBeDefined();
     expect(initCall![1]).toMatchObject({
-      cwd: expect.stringContaining(".worktrees/"),
+      cwd: expect.stringMatching(/[\\\/]\.worktrees[\\\/]/),
       timeout: 120_000,
     });
 
@@ -332,7 +334,7 @@ describe("TaskExecutor worktreeInitCommand", () => {
     expect(onError).not.toHaveBeenCalled();
 
     // Agent should still have been created
-    expect(mockedCreateHaiAgent).toHaveBeenCalled();
+    expect(mockedCreateKbAgent).toHaveBeenCalled();
   });
 
   it("does NOT run init command on worktree resume", async () => {
@@ -378,7 +380,7 @@ describe("TaskExecutor worktree naming", () => {
     vi.clearAllMocks();
     mockedExistsSync.mockReturnValue(false);
     mockedGenerateWorktreeName.mockReturnValue("swift-falcon");
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -394,7 +396,7 @@ describe("TaskExecutor worktree naming", () => {
 
     // The worktree path stored should use the generated name, not the task ID
     expect(store.updateTask).toHaveBeenCalledWith("KB-030", {
-      worktree: "/tmp/test/.worktrees/swift-falcon",
+      worktree: path.normalize("/tmp/test/.worktrees/swift-falcon"),
     });
     expect(mockedGenerateWorktreeName).toHaveBeenCalledWith("/tmp/test");
   });
@@ -447,7 +449,7 @@ describe("TaskExecutor dependency-based worktree creation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockedExistsSync.mockReturnValue(false);
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -608,7 +610,7 @@ describe("TaskExecutor worktree pool integration", () => {
     vi.clearAllMocks();
     // Default: worktree does NOT exist (new worktree)
     mockedExistsSync.mockReturnValue(false);
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -815,7 +817,7 @@ describe("Merger worktree pool integration", () => {
 
     mockedExecSync.mockImplementation(mockMergerExecSync);
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -842,7 +844,7 @@ describe("Merger worktree pool integration", () => {
 
     mockedExecSync.mockImplementation(mockMergerExecSync);
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -1007,7 +1009,7 @@ describe("buildExecutionPrompt", () => {
     });
 
     const mockPrompt = vi.fn().mockResolvedValue(undefined);
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: mockPrompt,
         dispose: vi.fn(),
@@ -1087,7 +1089,7 @@ describe("TaskExecutor pause behavior", () => {
     const store = createMockStore();
     const disposeFn = vi.fn();
 
-    mockedCreateHaiAgent.mockImplementation(async () => {
+    mockedCreateKbAgent.mockImplementation(async () => {
       return {
         session: {
           prompt: vi.fn().mockImplementation(async () => {
@@ -1123,7 +1125,7 @@ describe("TaskExecutor pause behavior", () => {
   it("does not move to in-review when paused during execution (graceful session end)", async () => {
     const store = createMockStore();
 
-    mockedCreateHaiAgent.mockImplementation(async () => {
+    mockedCreateKbAgent.mockImplementation(async () => {
       return {
         session: {
           prompt: vi.fn().mockImplementation(async () => {
@@ -1160,7 +1162,7 @@ describe("TaskExecutor pause behavior", () => {
       { id: "KB-002", column: "in-progress", paused: false, title: "Active task" },
     ]);
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -1188,7 +1190,7 @@ describe("TaskExecutor global pause behavior", () => {
     const disposeFn2 = vi.fn();
     let callCount = 0;
 
-    mockedCreateHaiAgent.mockImplementation(async () => {
+    mockedCreateKbAgent.mockImplementation(async () => {
       callCount++;
       const dispose = callCount === 1 ? disposeFn1 : disposeFn2;
       return {
@@ -1234,7 +1236,7 @@ describe("TaskExecutor global pause behavior", () => {
   it("moves paused tasks to todo (not marked as failed)", async () => {
     const store = createMockStore();
 
-    mockedCreateHaiAgent.mockImplementation(async () => ({
+    mockedCreateKbAgent.mockImplementation(async () => ({
       session: {
         prompt: vi.fn().mockImplementation(async () => {
           store._trigger("settings:updated", {
@@ -1262,7 +1264,7 @@ describe("TaskExecutor global pause behavior", () => {
     const store = createMockStore();
     const disposeFn = vi.fn();
 
-    mockedCreateHaiAgent.mockImplementation(async () => ({
+    mockedCreateKbAgent.mockImplementation(async () => ({
       session: {
         prompt: vi.fn().mockImplementation(async () => {
           // Trigger settings:updated but globalPause stays false
@@ -1290,7 +1292,7 @@ describe("TaskExecutor global pause behavior", () => {
   it("takes no action when globalPause transitions from true to true", async () => {
     const store = createMockStore();
 
-    mockedCreateHaiAgent.mockImplementation(async () => ({
+    mockedCreateKbAgent.mockImplementation(async () => ({
       session: {
         prompt: vi.fn().mockImplementation(async () => {
           // Trigger settings:updated but globalPause is already true
@@ -1326,7 +1328,7 @@ describe("TaskExecutor enginePaused soft pause (no agent termination)", () => {
     const store = createMockStore();
     const disposeFn = vi.fn();
 
-    mockedCreateHaiAgent.mockImplementation(async () => ({
+    mockedCreateKbAgent.mockImplementation(async () => ({
       session: {
         prompt: vi.fn().mockImplementation(async () => {
           // Trigger engine pause while the session is active
@@ -1359,7 +1361,7 @@ describe("TaskExecutor enginePaused soft pause (no agent termination)", () => {
   it("does NOT move tasks to todo when enginePaused transitions false→true", async () => {
     const store = createMockStore();
 
-    mockedCreateHaiAgent.mockImplementation(async () => ({
+    mockedCreateKbAgent.mockImplementation(async () => ({
       session: {
         prompt: vi.fn().mockImplementation(async () => {
           store._trigger("settings:updated", {
@@ -1387,7 +1389,7 @@ describe("TaskExecutor enginePaused soft pause (no agent termination)", () => {
   it("takes no action when enginePaused stays false (false→false)", async () => {
     const store = createMockStore();
 
-    mockedCreateHaiAgent.mockImplementation(async () => ({
+    mockedCreateKbAgent.mockImplementation(async () => ({
       session: {
         prompt: vi.fn().mockImplementation(async () => {
           store._trigger("settings:updated", {
@@ -1414,7 +1416,7 @@ describe("TaskExecutor enginePaused soft pause (no agent termination)", () => {
   it("takes no action when enginePaused stays true (true→true)", async () => {
     const store = createMockStore();
 
-    mockedCreateHaiAgent.mockImplementation(async () => ({
+    mockedCreateKbAgent.mockImplementation(async () => ({
       session: {
         prompt: vi.fn().mockImplementation(async () => {
           store._trigger("settings:updated", {
@@ -1459,7 +1461,7 @@ async function captureTools(): Promise<Record<string, (id: string, params: any) 
   mockedExistsSync.mockReturnValue(true);
 
   let capturedTools: any[] = [];
-  mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+  mockedCreateKbAgent.mockImplementation(async (opts: any) => {
     capturedTools = opts.customTools || [];
     return {
       session: {
@@ -1676,7 +1678,7 @@ describe("Code review verdict enforcement - task_update blocking", () => {
   it("EXECUTOR_SYSTEM_PROMPT contains code review enforcement language", async () => {
     // Capture the system prompt passed to createKbAgent
     let capturedSystemPrompt = "";
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       capturedSystemPrompt = opts.systemPrompt || "";
       return {
         session: {
@@ -1765,7 +1767,7 @@ describe("RETHINK verdict handling", () => {
       navigateTree: mockNavigateTree,
     };
 
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       capturedTools = opts.customTools || [];
       return { session: mockSession } as any;
     });
@@ -1815,7 +1817,7 @@ describe("RETHINK verdict handling", () => {
     // Verify git reset was called
     expect(mockedExecSync).toHaveBeenCalledWith(
       "git reset --hard abc123def",
-      expect.objectContaining({ cwd: expect.stringContaining(".worktrees/") }),
+      expect.objectContaining({ cwd: expect.stringContaining(".worktrees") }),
     );
   });
 
@@ -2015,7 +2017,7 @@ describe("RETHINK verdict handling", () => {
       navigateTree: mockNavigateTree,
     };
 
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       capturedTools = opts.customTools || [];
       return { session: mockSession } as any;
     });
@@ -2084,7 +2086,7 @@ describe("Plan RETHINK verdict handling", () => {
       navigateTree: mockNavigateTree,
     };
 
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       capturedTools = opts.customTools || [];
       return { session: mockSession } as any;
     });
@@ -2340,7 +2342,7 @@ describe("task_add_dep tool", () => {
     mockedExistsSync.mockReturnValue(true);
 
     let capturedTools: any[] = [];
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       capturedTools = opts.customTools || [];
       return {
         session: {
@@ -2537,7 +2539,7 @@ describe("task_add_dep tool", () => {
     const disposeFn = vi.fn();
     let capturedTools: any[] = [];
 
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       capturedTools = opts.customTools || [];
       return {
         session: {
@@ -2610,7 +2612,7 @@ describe("TaskExecutor usage limit detection", () => {
     const pauser = new UsageLimitPauser(store);
     const onUsageLimitHitSpy = vi.spyOn(pauser, "onUsageLimitHit");
 
-    mockedCreateHaiAgent.mockRejectedValue(new Error("rate_limit_error: Rate limit exceeded"));
+    mockedCreateKbAgent.mockRejectedValue(new Error("rate_limit_error: Rate limit exceeded"));
 
     const onError = vi.fn();
     const executor = new TaskExecutor(store, "/tmp/test", {
@@ -2647,7 +2649,7 @@ describe("TaskExecutor usage limit detection", () => {
     const pauser = new UsageLimitPauser(store);
     const onUsageLimitHitSpy = vi.spyOn(pauser, "onUsageLimitHit");
 
-    mockedCreateHaiAgent.mockRejectedValue(new Error("connection refused"));
+    mockedCreateKbAgent.mockRejectedValue(new Error("connection refused"));
 
     const onError = vi.fn();
     const executor = new TaskExecutor(store, "/tmp/test", {
@@ -2676,7 +2678,7 @@ describe("TaskExecutor usage limit detection", () => {
   it("works without usageLimitPauser (backward compatible)", async () => {
     const store = createMockStore();
 
-    mockedCreateHaiAgent.mockRejectedValue(new Error("rate_limit_error: Rate limit exceeded"));
+    mockedCreateKbAgent.mockRejectedValue(new Error("rate_limit_error: Rate limit exceeded"));
 
     const onError = vi.fn();
     const executor = new TaskExecutor(store, "/tmp/test", { onError });
@@ -2711,7 +2713,7 @@ describe("TaskExecutor usage limit detection", () => {
       dispose: vi.fn(),
       state: { error: "rate_limit_error: Rate limit exceeded" },
     };
-    mockedCreateHaiAgent.mockResolvedValue({ session: mockSession } as any);
+    mockedCreateKbAgent.mockResolvedValue({ session: mockSession } as any);
 
     const onError = vi.fn();
     const executor = new TaskExecutor(store, "/tmp/test", {
@@ -2749,7 +2751,7 @@ describe("TaskExecutor usage limit detection", () => {
     const pauser = new UsageLimitPauser(store);
     const onUsageLimitHitSpy = vi.spyOn(pauser, "onUsageLimitHit");
 
-    mockedCreateHaiAgent.mockRejectedValue(new Error("overloaded_error: Overloaded"));
+    mockedCreateKbAgent.mockRejectedValue(new Error("overloaded_error: Overloaded"));
 
     const executor = new TaskExecutor(store, "/tmp/test", {
       usageLimitPauser: pauser,

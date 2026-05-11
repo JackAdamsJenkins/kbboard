@@ -7,7 +7,7 @@ vi.mock("./pi.js", () => ({
 import { reviewStep } from "./reviewer.js";
 import { createKbAgent } from "./pi.js";
 
-const mockedCreateHaiAgent = vi.mocked(createKbAgent);
+const mockedCreateKbAgent = vi.mocked(createKbAgent);
 
 function createMockSession(reviewText: string) {
   return {
@@ -31,7 +31,7 @@ describe("reviewStep — model settings threading", () => {
   });
 
   it("passes defaultProvider and defaultModelId to createKbAgent when provided", async () => {
-    mockedCreateHaiAgent.mockResolvedValue(
+    mockedCreateKbAgent.mockResolvedValue(
       createMockSession("### Verdict: APPROVE\n### Summary\nLooks good."),
     );
 
@@ -44,14 +44,32 @@ describe("reviewStep — model settings threading", () => {
       },
     );
 
-    expect(mockedCreateHaiAgent).toHaveBeenCalledTimes(1);
-    const opts = mockedCreateHaiAgent.mock.calls[0][0];
+    expect(mockedCreateKbAgent).toHaveBeenCalledTimes(1);
+    const opts = mockedCreateKbAgent.mock.calls[0][0];
     expect(opts.defaultProvider).toBe("anthropic");
     expect(opts.defaultModelId).toBe("claude-sonnet-4-5");
   });
 
+  it("passes googleApiKeys to createKbAgent when provided", async () => {
+    mockedCreateKbAgent.mockResolvedValue(
+      createMockSession("### Verdict: APPROVE\n### Summary\nLooks good."),
+    );
+
+    await reviewStep(
+      "/tmp/worktree", "KB-100", 1, "Test Step", "plan", "# prompt",
+      undefined,
+      {
+        googleApiKeys: ["sk-123", "sk-456"],
+      },
+    );
+
+    expect(mockedCreateKbAgent).toHaveBeenCalledTimes(1);
+    const opts = mockedCreateKbAgent.mock.calls[0][0];
+    expect(opts.googleApiKeys).toEqual(["sk-123", "sk-456"]);
+  });
+
   it("does not set model fields when ReviewOptions omits them", async () => {
-    mockedCreateHaiAgent.mockResolvedValue(
+    mockedCreateKbAgent.mockResolvedValue(
       createMockSession("### Verdict: APPROVE\n### Summary\nAll good."),
     );
 
@@ -61,14 +79,14 @@ describe("reviewStep — model settings threading", () => {
       {},
     );
 
-    expect(mockedCreateHaiAgent).toHaveBeenCalledTimes(1);
-    const opts = mockedCreateHaiAgent.mock.calls[0][0];
+    expect(mockedCreateKbAgent).toHaveBeenCalledTimes(1);
+    const opts = mockedCreateKbAgent.mock.calls[0][0];
     expect(opts.defaultProvider).toBeUndefined();
     expect(opts.defaultModelId).toBeUndefined();
   });
 
   it("extracts APPROVE verdict correctly", async () => {
-    mockedCreateHaiAgent.mockResolvedValue(
+    mockedCreateKbAgent.mockResolvedValue(
       createMockSession("### Verdict: APPROVE\n### Summary\nLooks good."),
     );
 
@@ -86,7 +104,7 @@ describe("reviewStep — spec review type", () => {
   });
 
   it("extracts verdict correctly for spec reviews", async () => {
-    mockedCreateHaiAgent.mockResolvedValue(
+    mockedCreateKbAgent.mockResolvedValue(
       createMockSession("## Spec Review: KB-050\n\n### Verdict: APPROVE\n### Summary\nSpec looks complete and well-structured."),
     );
 
@@ -99,7 +117,7 @@ describe("reviewStep — spec review type", () => {
   });
 
   it("extracts REVISE verdict for spec reviews", async () => {
-    mockedCreateHaiAgent.mockResolvedValue(
+    mockedCreateKbAgent.mockResolvedValue(
       createMockSession("## Spec Review: KB-050\n\n### Verdict: REVISE\n### Summary\nMissing test requirements."),
     );
 
@@ -111,7 +129,7 @@ describe("reviewStep — spec review type", () => {
   });
 
   it("extracts RETHINK verdict for spec reviews", async () => {
-    mockedCreateHaiAgent.mockResolvedValue(
+    mockedCreateKbAgent.mockResolvedValue(
       createMockSession("## Spec Review: KB-050\n\n### Verdict: RETHINK\n### Summary\nFundamentally wrong approach."),
     );
 
@@ -123,7 +141,7 @@ describe("reviewStep — spec review type", () => {
   });
 
   it("calls createKbAgent with readonly tools and correct system prompt", async () => {
-    mockedCreateHaiAgent.mockResolvedValue(
+    mockedCreateKbAgent.mockResolvedValue(
       createMockSession("### Verdict: APPROVE\n### Summary\nGood spec."),
     );
 
@@ -131,8 +149,8 @@ describe("reviewStep — spec review type", () => {
       "/tmp/worktree", "KB-050", 0, "Spec Review", "spec", "# Task: KB-050",
     );
 
-    expect(mockedCreateHaiAgent).toHaveBeenCalledTimes(1);
-    const opts = mockedCreateHaiAgent.mock.calls[0][0];
+    expect(mockedCreateKbAgent).toHaveBeenCalledTimes(1);
+    const opts = mockedCreateKbAgent.mock.calls[0][0];
     expect(opts.tools).toBe("readonly");
     expect(opts.systemPrompt).toContain("Spec Review Format");
     expect(opts.systemPrompt).toContain("Mission clarity");
@@ -140,7 +158,7 @@ describe("reviewStep — spec review type", () => {
 
   it("builds review request with spec-specific instructions", async () => {
     let capturedPrompt = "";
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockImplementation(async (prompt: string) => {
           capturedPrompt = prompt;
@@ -169,7 +187,7 @@ describe("reviewStep — spec review type", () => {
 
   it("does not include git diff instructions for spec reviews", async () => {
     let capturedPrompt = "";
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockImplementation(async (prompt: string) => {
           capturedPrompt = prompt;
@@ -208,7 +226,7 @@ describe("reviewStep — exhausted-retry error detection", () => {
       dispose: vi.fn(),
       state: { error: "rate_limit_error: Rate limit exceeded" },
     };
-    mockedCreateHaiAgent.mockResolvedValue({ session: mockSession } as any);
+    mockedCreateKbAgent.mockResolvedValue({ session: mockSession } as any);
 
     await expect(
       reviewStep("/tmp/worktree", "KB-100", 1, "Test Step", "code", "# prompt"),
@@ -223,7 +241,7 @@ describe("reviewStep — exhausted-retry error detection", () => {
       dispose: disposeFn,
       state: { error: "rate_limit_error: Rate limit exceeded" },
     };
-    mockedCreateHaiAgent.mockResolvedValue({ session: mockSession } as any);
+    mockedCreateKbAgent.mockResolvedValue({ session: mockSession } as any);
 
     await expect(
       reviewStep("/tmp/worktree", "KB-100", 1, "Test Step", "code", "# prompt"),
@@ -234,7 +252,7 @@ describe("reviewStep — exhausted-retry error detection", () => {
   });
 
   it("does not throw when session completes without error", async () => {
-    mockedCreateHaiAgent.mockResolvedValue(
+    mockedCreateKbAgent.mockResolvedValue(
       createMockSession("### Verdict: APPROVE\n### Summary\nLooks good."),
     );
 

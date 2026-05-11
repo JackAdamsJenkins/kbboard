@@ -444,6 +444,7 @@ export class TriageProcessor {
           defaultProvider: settings.defaultProvider,
           defaultModelId: settings.defaultModelId,
           defaultThinkingLevel: settings.defaultThinkingLevel,
+          googleApiKeys: settings.googleApiKeys,
         });
 
         // Make session available to review_spec tool (for RETHINK rewind)

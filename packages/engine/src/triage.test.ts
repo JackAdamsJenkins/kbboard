@@ -21,7 +21,7 @@ import type { TaskDetail } from "@kb/core";
 
 const mockedReviewStep = vi.mocked(reviewStep);
 
-const mockedCreateHaiAgent = vi.mocked(createKbAgent);
+const mockedCreateKbAgent = vi.mocked(createKbAgent);
 
 function createMockStore(tasks: any[] = []) {
   const listeners = new Map<string, Function[]>();
@@ -95,7 +95,7 @@ describe("TriageProcessor with semaphore", () => {
     const acquireSpy = vi.spyOn(sem, "acquire");
     const releaseSpy = vi.spyOn(sem, "release");
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -120,7 +120,7 @@ describe("TriageProcessor with semaphore", () => {
     // Semaphore was used via run() which calls acquire + release
     expect(acquireSpy).toHaveBeenCalledOnce();
     expect(releaseSpy).toHaveBeenCalledOnce();
-    expect(mockedCreateHaiAgent).toHaveBeenCalledOnce();
+    expect(mockedCreateKbAgent).toHaveBeenCalledOnce();
     expect(sem.activeCount).toBe(0);
   });
 
@@ -128,7 +128,7 @@ describe("TriageProcessor with semaphore", () => {
     const sem = new AgentSemaphore(1);
     const store = createMockStore();
 
-    mockedCreateHaiAgent.mockRejectedValue(new Error("agent failed"));
+    mockedCreateKbAgent.mockRejectedValue(new Error("agent failed"));
 
     const onError = vi.fn();
     const triage = new TriageProcessor(store, "/tmp/test", {
@@ -159,7 +159,7 @@ describe("TriageProcessor with semaphore", () => {
     let concurrent = 0;
     let maxConcurrent = 0;
 
-    mockedCreateHaiAgent.mockImplementation(async () => {
+    mockedCreateKbAgent.mockImplementation(async () => {
       concurrent++;
       maxConcurrent = Math.max(maxConcurrent, concurrent);
       return {
@@ -206,7 +206,7 @@ describe("TriageProcessor with semaphore", () => {
     await sem.acquire();
 
     let agentStarted = false;
-    mockedCreateHaiAgent.mockImplementation(async () => {
+    mockedCreateKbAgent.mockImplementation(async () => {
       agentStarted = true;
       return {
         session: {
@@ -269,7 +269,7 @@ describe("TriageProcessor poll re-entrance guard", () => {
         }),
     );
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -328,7 +328,7 @@ describe("TriageProcessor concurrent dispatch", () => {
     let maxConcurrent = 0;
     const resolvers: (() => void)[] = [];
 
-    mockedCreateHaiAgent.mockImplementation(async () => {
+    mockedCreateKbAgent.mockImplementation(async () => {
       concurrent++;
       maxConcurrent = Math.max(maxConcurrent, concurrent);
       return {
@@ -352,7 +352,7 @@ describe("TriageProcessor concurrent dispatch", () => {
     // All 3 tasks should have been dispatched concurrently
     await new Promise((r) => setTimeout(r, 50));
     expect(maxConcurrent).toBe(3);
-    expect(mockedCreateHaiAgent).toHaveBeenCalledTimes(3);
+    expect(mockedCreateKbAgent).toHaveBeenCalledTimes(3);
 
     // Resolve all agents
     resolvers.forEach((r) => r());
@@ -366,7 +366,7 @@ describe("TriageProcessor concurrent dispatch", () => {
     const store = createMockStore(tasks);
 
     let resolveAgent: (() => void) | undefined;
-    mockedCreateHaiAgent.mockImplementation(async () => {
+    mockedCreateKbAgent.mockImplementation(async () => {
       return {
         session: {
           prompt: vi.fn().mockImplementation(
@@ -403,7 +403,7 @@ describe("TriageProcessor concurrent dispatch", () => {
     let maxConcurrent = 0;
     const resolvers: (() => void)[] = [];
 
-    mockedCreateHaiAgent.mockImplementation(async () => {
+    mockedCreateKbAgent.mockImplementation(async () => {
       concurrent++;
       maxConcurrent = Math.max(maxConcurrent, concurrent);
       return {
@@ -427,18 +427,18 @@ describe("TriageProcessor concurrent dispatch", () => {
 
     // Only 1 agent should be running at a time
     expect(maxConcurrent).toBe(1);
-    expect(mockedCreateHaiAgent).toHaveBeenCalledTimes(1);
+    expect(mockedCreateKbAgent).toHaveBeenCalledTimes(1);
 
     // Resolve first, second gets its slot
     resolvers[0]();
     await new Promise((r) => setTimeout(r, 50));
-    expect(mockedCreateHaiAgent).toHaveBeenCalledTimes(2);
+    expect(mockedCreateKbAgent).toHaveBeenCalledTimes(2);
     expect(maxConcurrent).toBe(1);
 
     // Resolve second, third gets its slot
     resolvers[1]();
     await new Promise((r) => setTimeout(r, 50));
-    expect(mockedCreateHaiAgent).toHaveBeenCalledTimes(3);
+    expect(mockedCreateKbAgent).toHaveBeenCalledTimes(3);
     expect(maxConcurrent).toBe(1);
 
     // Resolve third
@@ -453,7 +453,7 @@ describe("TriageProcessor concurrent dispatch", () => {
     const store = createMockStore([task1]);
 
     const resolvers: (() => void)[] = [];
-    mockedCreateHaiAgent.mockImplementation(async () => ({
+    mockedCreateKbAgent.mockImplementation(async () => ({
       session: {
         prompt: vi.fn().mockImplementation(
           () => new Promise<void>((r) => resolvers.push(r)),
@@ -469,7 +469,7 @@ describe("TriageProcessor concurrent dispatch", () => {
     // First poll dispatches KB-001
     await (triage as any).poll();
     await new Promise((r) => setTimeout(r, 20));
-    expect(mockedCreateHaiAgent).toHaveBeenCalledTimes(1);
+    expect(mockedCreateKbAgent).toHaveBeenCalledTimes(1);
 
     // A new task arrives — second poll should discover it
     store.listTasks.mockResolvedValue([task1, task2]);
@@ -478,7 +478,7 @@ describe("TriageProcessor concurrent dispatch", () => {
     // so only KB-002 is dispatched
     await (triage as any).poll();
     await new Promise((r) => setTimeout(r, 20));
-    expect(mockedCreateHaiAgent).toHaveBeenCalledTimes(2);
+    expect(mockedCreateKbAgent).toHaveBeenCalledTimes(2);
 
     // Clean up
     resolvers.forEach((r) => r());
@@ -550,7 +550,7 @@ describe("TriageProcessor paused tasks", () => {
     };
     const store = createMockStore([pausedTask]);
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -562,7 +562,7 @@ describe("TriageProcessor paused tasks", () => {
     await (triage as any).poll();
 
     // Agent should never be created for a paused task
-    expect(mockedCreateHaiAgent).not.toHaveBeenCalled();
+    expect(mockedCreateKbAgent).not.toHaveBeenCalled();
     expect(store.updateTask).not.toHaveBeenCalled();
   });
 
@@ -581,7 +581,7 @@ describe("TriageProcessor paused tasks", () => {
     };
     const store = createMockStore([normalTask]);
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -627,7 +627,7 @@ describe("TriageProcessor globalPause", () => {
       globalPause: true,
     });
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -639,7 +639,7 @@ describe("TriageProcessor globalPause", () => {
     await (triage as any).poll();
 
     // Agent should never be created when globally paused
-    expect(mockedCreateHaiAgent).not.toHaveBeenCalled();
+    expect(mockedCreateKbAgent).not.toHaveBeenCalled();
     expect(store.updateTask).not.toHaveBeenCalled();
   });
 
@@ -666,7 +666,7 @@ describe("TriageProcessor globalPause", () => {
       globalPause: true,
     });
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -678,7 +678,7 @@ describe("TriageProcessor globalPause", () => {
 
     // First poll — paused, nothing happens
     await (triage as any).poll();
-    expect(mockedCreateHaiAgent).not.toHaveBeenCalled();
+    expect(mockedCreateKbAgent).not.toHaveBeenCalled();
 
     // Toggle globalPause off
     store.getSettings.mockResolvedValue({
@@ -755,7 +755,7 @@ describe("TriageProcessor immediate resume on unpause via settings:updated", () 
       globalPause: false,
     });
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -858,7 +858,7 @@ describe("TriageProcessor enginePaused (soft pause)", () => {
       enginePaused: true,
     });
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -870,7 +870,7 @@ describe("TriageProcessor enginePaused (soft pause)", () => {
     await (triage as any).poll();
 
     // Agent should never be created when engine is soft-paused
-    expect(mockedCreateHaiAgent).not.toHaveBeenCalled();
+    expect(mockedCreateKbAgent).not.toHaveBeenCalled();
     expect(store.updateTask).not.toHaveBeenCalled();
   });
 
@@ -897,7 +897,7 @@ describe("TriageProcessor enginePaused (soft pause)", () => {
       enginePaused: true,
     });
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -909,7 +909,7 @@ describe("TriageProcessor enginePaused (soft pause)", () => {
 
     // First poll — engine paused, nothing happens
     await (triage as any).poll();
-    expect(mockedCreateHaiAgent).not.toHaveBeenCalled();
+    expect(mockedCreateKbAgent).not.toHaveBeenCalled();
 
     // Toggle enginePaused off
     store.getSettings.mockResolvedValue({
@@ -950,7 +950,7 @@ describe("TriageProcessor enginePaused (soft pause)", () => {
       enginePaused: false,
     });
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -1116,7 +1116,7 @@ describe("TRIAGE_SYSTEM_PROMPT and task_get tool", () => {
   it("system prompt contains dependency awareness instructions", async () => {
     const store = createMockStore();
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -1137,7 +1137,7 @@ describe("TRIAGE_SYSTEM_PROMPT and task_get tool", () => {
       updatedAt: new Date().toISOString(),
     });
 
-    const callArgs = mockedCreateHaiAgent.mock.calls[0][0];
+    const callArgs = mockedCreateKbAgent.mock.calls[0][0];
     const systemPrompt = callArgs.systemPrompt as string;
     expect(systemPrompt).toContain("## Dependency awareness");
     expect(systemPrompt).toContain("call `task_get` on that task ID to read its PROMPT.md");
@@ -1146,7 +1146,7 @@ describe("TRIAGE_SYSTEM_PROMPT and task_get tool", () => {
   it("task_get tool description mentions reading dependency specs", async () => {
     const store = createMockStore();
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -1167,7 +1167,7 @@ describe("TRIAGE_SYSTEM_PROMPT and task_get tool", () => {
       updatedAt: new Date().toISOString(),
     });
 
-    const callArgs = mockedCreateHaiAgent.mock.calls[0][0];
+    const callArgs = mockedCreateKbAgent.mock.calls[0][0];
     const tools = callArgs.customTools as any[];
     const taskGetTool = tools.find((t: any) => t.name === "task_get");
     expect(taskGetTool).toBeDefined();
@@ -1248,7 +1248,7 @@ describe("TriageProcessor deleted task handling", () => {
     // Second call with same task should NOT short-circuit from processing guard.
     // Reset mock to succeed and set up agent mock for the retry path.
     store.updateTask.mockResolvedValue({});
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -1259,7 +1259,7 @@ describe("TriageProcessor deleted task handling", () => {
 
     // If processing Set was cleaned up, updateTask will be called again for "specifying"
     expect(store.updateTask).toHaveBeenCalledWith("KB-099", { status: "specifying" });
-    expect(mockedCreateHaiAgent).toHaveBeenCalled();
+    expect(mockedCreateKbAgent).toHaveBeenCalled();
   });
 });
 
@@ -1272,7 +1272,7 @@ describe("TriageProcessor agent log persistence", () => {
     const store = createMockStore();
     let capturedOnText: ((delta: string) => void) | undefined;
 
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       capturedOnText = opts.onText;
       return {
         session: {
@@ -1308,7 +1308,7 @@ describe("TriageProcessor agent log persistence", () => {
     const store = createMockStore();
     let capturedOnToolStart: ((name: string, args: any) => void) | undefined;
 
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       capturedOnToolStart = opts.onToolStart;
       return {
         session: {
@@ -1342,7 +1342,7 @@ describe("TriageProcessor agent log persistence", () => {
     const onAgentText = vi.fn();
     let capturedOnText: ((delta: string) => void) | undefined;
 
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       capturedOnText = opts.onText;
       return {
         session: {
@@ -1432,7 +1432,7 @@ describe("TriageProcessor dependency parsing", () => {
     });
 
     let reviewSpecTool: any;
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       reviewSpecTool = opts.customTools?.find((t: any) => t.name === "review_spec");
       return {
         session: {
@@ -1489,7 +1489,7 @@ describe("TriageProcessor dependency parsing", () => {
     });
 
     let reviewSpecTool: any;
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       reviewSpecTool = opts.customTools?.find((t: any) => t.name === "review_spec");
       return {
         session: {
@@ -1539,7 +1539,7 @@ describe("TriageProcessor dependency parsing", () => {
     });
 
     let reviewSpecTool: any;
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       reviewSpecTool = opts.customTools?.find((t: any) => t.name === "review_spec");
       return {
         session: {
@@ -1579,7 +1579,7 @@ describe("TriageProcessor usage limit detection", () => {
     const pauser = new UsageLimitPauser(store);
     const onUsageLimitHitSpy = vi.spyOn(pauser, "onUsageLimitHit");
 
-    mockedCreateHaiAgent.mockRejectedValue(new Error("rate_limit_error: Rate limit exceeded"));
+    mockedCreateKbAgent.mockRejectedValue(new Error("rate_limit_error: Rate limit exceeded"));
 
     const onError = vi.fn();
     const triage = new TriageProcessor(store, "/tmp/test", {
@@ -1621,7 +1621,7 @@ describe("TriageProcessor usage limit detection", () => {
       dispose: vi.fn(),
       state: { error: "overloaded_error: Overloaded" },
     };
-    mockedCreateHaiAgent.mockResolvedValue({ session: mockSession } as any);
+    mockedCreateKbAgent.mockResolvedValue({ session: mockSession } as any);
 
     const onError = vi.fn();
     const triage = new TriageProcessor(store, "/tmp/test", {
@@ -1659,7 +1659,7 @@ describe("TriageProcessor usage limit detection", () => {
     const pauser = new UsageLimitPauser(store);
     const onUsageLimitHitSpy = vi.spyOn(pauser, "onUsageLimitHit");
 
-    mockedCreateHaiAgent.mockRejectedValue(new Error("connection refused"));
+    mockedCreateKbAgent.mockRejectedValue(new Error("connection refused"));
 
     const onError = vi.fn();
     const triage = new TriageProcessor(store, "/tmp/test", {
@@ -1722,7 +1722,7 @@ describe("TriageProcessor usage limit detection", () => {
   it("works without usageLimitPauser (backward compatible)", async () => {
     const store = createMockStore();
 
-    mockedCreateHaiAgent.mockRejectedValue(new Error("rate_limit_error: Rate limit exceeded"));
+    mockedCreateKbAgent.mockRejectedValue(new Error("rate_limit_error: Rate limit exceeded"));
 
     const onError = vi.fn();
     const triage = new TriageProcessor(store, "/tmp/test", {
@@ -1756,7 +1756,7 @@ describe("TriageProcessor global pause agent kill", () => {
     const store = createMockStore();
     const disposeFn = vi.fn();
 
-    mockedCreateHaiAgent.mockImplementation(async () => ({
+    mockedCreateKbAgent.mockImplementation(async () => ({
       session: {
         prompt: vi.fn().mockImplementation(async () => {
           // Trigger global pause while the session is active
@@ -1795,7 +1795,7 @@ describe("TriageProcessor global pause agent kill", () => {
     const store = createMockStore();
     const onError = vi.fn();
 
-    mockedCreateHaiAgent.mockImplementation(async () => ({
+    mockedCreateKbAgent.mockImplementation(async () => ({
       session: {
         prompt: vi.fn().mockImplementation(async () => {
           store._trigger("settings:updated", {
@@ -1833,7 +1833,7 @@ describe("TriageProcessor global pause agent kill", () => {
     const store = createMockStore();
     const onError = vi.fn();
 
-    mockedCreateHaiAgent.mockImplementation(async () => {
+    mockedCreateKbAgent.mockImplementation(async () => {
       throw new Error("Agent creation failed");
     });
 
@@ -1893,7 +1893,7 @@ describe("TriageProcessor enginePaused soft pause (no agent termination)", () =>
     });
 
     let reviewSpecTool: any;
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       reviewSpecTool = opts.customTools?.find((t: any) => t.name === "review_spec");
       return {
         session: {
@@ -1948,7 +1948,7 @@ describe("TriageProcessor enginePaused soft pause (no agent termination)", () =>
     });
 
     let reviewSpecTool: any;
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       reviewSpecTool = opts.customTools?.find((t: any) => t.name === "review_spec");
       return {
         session: {
@@ -2022,7 +2022,7 @@ describe("TriageProcessor review_spec tool", () => {
   it("registers review_spec as a custom tool on createKbAgent calls", async () => {
     const store = createMockStore();
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -2033,8 +2033,8 @@ describe("TriageProcessor review_spec tool", () => {
     const triage = new TriageProcessor(store, tmpDir);
     await triage.specifyTask(makeTask());
 
-    expect(mockedCreateHaiAgent).toHaveBeenCalledOnce();
-    const callArgs = mockedCreateHaiAgent.mock.calls[0][0];
+    expect(mockedCreateKbAgent).toHaveBeenCalledOnce();
+    const callArgs = mockedCreateKbAgent.mock.calls[0][0];
     const tools = callArgs.customTools as any[];
     const reviewTool = tools.find((t: any) => t.name === "review_spec");
     expect(reviewTool).toBeDefined();
@@ -2045,7 +2045,7 @@ describe("TriageProcessor review_spec tool", () => {
   it("system prompt contains instructions for calling review_spec", async () => {
     const store = createMockStore();
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -2056,7 +2056,7 @@ describe("TriageProcessor review_spec tool", () => {
     const triage = new TriageProcessor(store, tmpDir);
     await triage.specifyTask(makeTask());
 
-    const callArgs = mockedCreateHaiAgent.mock.calls[0][0];
+    const callArgs = mockedCreateKbAgent.mock.calls[0][0];
     const systemPrompt = callArgs.systemPrompt as string;
     expect(systemPrompt).toContain("review_spec()");
     expect(systemPrompt).toContain("APPROVE");
@@ -2072,7 +2072,7 @@ describe("TriageProcessor review_spec tool", () => {
     await writePromptMd(tmpDir, "KB-001", promptContent);
 
     let reviewSpecTool: any;
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       reviewSpecTool = opts.customTools?.find((t: any) => t.name === "review_spec");
       return {
         session: {
@@ -2109,7 +2109,7 @@ describe("TriageProcessor review_spec tool", () => {
     await writePromptMd(tmpDir, "KB-001", promptContent);
 
     let reviewSpecTool: any;
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       reviewSpecTool = opts.customTools?.find((t: any) => t.name === "review_spec");
       return {
         session: {
@@ -2151,7 +2151,7 @@ describe("TriageProcessor review_spec tool", () => {
     await writePromptMd(tmpDir, "KB-001", promptContent);
 
     let reviewSpecTool: any;
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       reviewSpecTool = opts.customTools?.find((t: any) => t.name === "review_spec");
       return {
         session: {
@@ -2194,7 +2194,7 @@ describe("TriageProcessor review_spec tool", () => {
 
     let reviewResult: any;
     let reviewSpecTool: any;
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       reviewSpecTool = opts.customTools?.find((t: any) => t.name === "review_spec");
       return {
         session: {
@@ -2223,7 +2223,7 @@ describe("TriageProcessor review_spec tool", () => {
 
     let reviewResult: any;
     let reviewSpecTool: any;
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       reviewSpecTool = opts.customTools?.find((t: any) => t.name === "review_spec");
       return {
         session: {
@@ -2253,7 +2253,7 @@ describe("TriageProcessor review_spec tool", () => {
     await writePromptMd(tmpDir, "KB-001", promptContent);
 
     let reviewSpecTool: any;
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       reviewSpecTool = opts.customTools?.find((t: any) => t.name === "review_spec");
       return {
         session: {
@@ -2299,7 +2299,7 @@ describe("TriageProcessor review_spec tool", () => {
 
     let reviewResult: any;
     let reviewSpecTool: any;
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       reviewSpecTool = opts.customTools?.find((t: any) => t.name === "review_spec");
       return {
         session: {
@@ -2335,7 +2335,7 @@ describe("TriageProcessor review_spec tool", () => {
     const promptContent = "# Task: KB-001\n\n**Size:** S\n\n## Steps\n";
     await writePromptMd(tmpDir, "KB-001", promptContent);
 
-    mockedCreateHaiAgent.mockResolvedValue({
+    mockedCreateKbAgent.mockResolvedValue({
       session: {
         prompt: vi.fn().mockResolvedValue(undefined),
         dispose: vi.fn(),
@@ -2366,7 +2366,7 @@ describe("TriageProcessor review_spec tool", () => {
     await writePromptMd(tmpDir, "KB-001", promptContent);
 
     let reviewSpecTool: any;
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       reviewSpecTool = opts.customTools?.find((t: any) => t.name === "review_spec");
       return {
         session: {
@@ -2412,7 +2412,7 @@ describe("TriageProcessor review_spec tool", () => {
     await writePromptMd(tmpDir, "KB-001", promptContent);
 
     let reviewSpecTool: any;
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       reviewSpecTool = opts.customTools?.find((t: any) => t.name === "review_spec");
       return {
         session: {
@@ -2453,7 +2453,7 @@ describe("TriageProcessor review_spec tool", () => {
     await writePromptMd(tmpDir, "KB-001", promptContent);
 
     let reviewSpecTool: any;
-    mockedCreateHaiAgent.mockImplementation(async (opts: any) => {
+    mockedCreateKbAgent.mockImplementation(async (opts: any) => {
       reviewSpecTool = opts.customTools?.find((t: any) => t.name === "review_spec");
       return {
         session: {

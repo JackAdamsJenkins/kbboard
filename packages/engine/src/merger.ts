@@ -265,6 +265,7 @@ export async function aiMergeTask(
       defaultProvider: settings.defaultProvider,
       defaultModelId: settings.defaultModelId,
       defaultThinkingLevel: settings.defaultThinkingLevel,
+      googleApiKeys: settings.googleApiKeys,
     });
 
     // Notify the caller so it can track/dispose the session externally (e.g. on global pause)

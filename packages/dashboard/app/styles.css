@@ -1642,3 +1642,28 @@ body {
     gap: 8px;
   }
 }
+/* === API Keys List === */
+.api-keys-list {
+  padding: 0 20px;
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.api-key-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.api-key-row input {
+  flex: 1;
+}
+
+.auth-hint {
+  display: block;
+  padding: 12px 20px;
+  font-size: 11px;
+  color: var(--text-muted);
+}

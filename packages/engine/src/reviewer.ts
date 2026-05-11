@@ -150,6 +150,8 @@ export interface ReviewOptions {
   store?: TaskStore;
   /** Task ID for agent log persistence. Required alongside `store`. */
   taskId?: string;
+  /** Google AI API keys for the engine. */
+  googleApiKeys?: string[];
 }
 
 /**
@@ -194,6 +196,7 @@ export async function reviewStep(
     defaultProvider: options.defaultProvider,
     defaultModelId: options.defaultModelId,
     defaultThinkingLevel: options.defaultThinkingLevel,
+    googleApiKeys: options.googleApiKeys,
   });
 
   let reviewText = "";

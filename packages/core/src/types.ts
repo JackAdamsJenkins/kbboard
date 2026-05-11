@@ -150,6 +150,8 @@ export interface Settings {
    *  produce better results but cost more. When undefined, the engine
    *  uses the model's default thinking level. */
   defaultThinkingLevel?: ThinkingLevel;
+  /** Google AI API keys for the engine. */
+  googleApiKeys?: string[];
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -165,8 +167,9 @@ export const DEFAULT_SETTINGS: Settings = {
   taskPrefix: undefined,
   includeTaskIdInCommit: true,
   defaultProvider: undefined,
-  defaultModelId: undefined,
+  defaultModelId: "gemma-4-31b-it",
   defaultThinkingLevel: undefined,
+  googleApiKeys: [],
 };
 
 export interface BoardConfig {
